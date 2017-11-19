@@ -15,7 +15,8 @@ public final class GitRunner {
         return getGitResponse(command);
     }
 
-    public static Response getGitResponse(final String[] command) throws IOException, InterruptedException {
+    public static Response getGitResponse(final String[] command)
+            throws IOException, InterruptedException {
         final ProcessBuilder builder = new ProcessBuilder(command);
         final Process process = builder.start();
         int status = 0;
@@ -26,11 +27,14 @@ public final class GitRunner {
         }
         if (status == 0) {
             final InputStream input = process.getInputStream();
-            return Response.ok(new InputStreamStreamingOutput(input), MediaType.APPLICATION_OCTET_STREAM).build();
+            InputStreamStreamingOutput entity = new InputStreamStreamingOutput(input);
+            return Response.ok(entity, MediaType.APPLICATION_OCTET_STREAM)
+                    .build();
         } else {
             final InputStream error = process.getErrorStream();
             return Response.status(HttpStatus.BAD_REQUEST_400.getStatusCode())
-                    .entity(new InputStreamStreamingOutput(error)).build();
+                    .entity(new InputStreamStreamingOutput(error))
+                    .build();
         }
     }
 

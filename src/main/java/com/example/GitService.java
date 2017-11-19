@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Paths;
 
+import javax.validation.constraints.Pattern;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -19,6 +20,7 @@ import javax.ws.rs.core.UriInfo;
 @Path("git")
 public class GitService {
 
+    public static final String HASH_VALIDATION_MESSAGE = "The resourceId must be valid hash";
     @Context
     UriInfo uri;
 
@@ -41,8 +43,12 @@ public class GitService {
     @GET
     @Path("/cat-file/{resourceId}")
     @Produces(MediaType.APPLICATION_OCTET_STREAM)
-    public Response catFile(@PathParam("resourceId")
-    String resourceId) throws IOException, InterruptedException {
+    public Response catFile(
+            @PathParam("resourceId")
+            @Pattern(regexp = "[0-9,a-z]+",
+                    message = HASH_VALIDATION_MESSAGE)
+            String resourceId)
+            throws IOException, InterruptedException {
         return GitRunner.catFile(resourceId);
     }
 }

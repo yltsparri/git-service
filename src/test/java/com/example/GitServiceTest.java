@@ -5,8 +5,10 @@ import static org.junit.Assert.assertEquals;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.Response;
 
 import org.glassfish.grizzly.http.server.HttpServer;
+import org.glassfish.grizzly.http.util.HttpStatus;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -141,9 +143,17 @@ public final class GitServiceTest {
 
     @Test
     public void testCatFile() {
-        String responseMsg = target.path("git/cat-file/2944af04be2950a7d3872ab8525b564915a8f4f9")
-                .request()
+        String responseMsg = target.path("git/cat-file/2944af04be2950a7d3872ab8525b564915a8f4f9").request()
                 .get(String.class);
         assertEquals(POM_CONTENT_STRING, responseMsg);
+    }
+
+    @Test
+    public void testCatFileValidation() {
+        Response response = target.path("git/cat-file/dssd >> test").request().get();
+        assertEquals(HttpStatus.BAD_REQUEST_400.getStatusCode(), response.getStatus());
+
+        String responseMsg = response.readEntity(String.class);
+        assertEquals(GitService.HASH_VALIDATION_MESSAGE, responseMsg);
     }
 }
