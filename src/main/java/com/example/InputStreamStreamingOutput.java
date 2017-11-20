@@ -21,12 +21,7 @@ public final class InputStreamStreamingOutput implements StreamingOutput {
     @Override
     public void write(OutputStream output)
             throws IOException, WebApplicationException {
-        byte[] buffer = new byte[1024];
-        int len = stream.read(buffer);
-        while (len != -1) {
-            output.write(buffer, 0, len);
-            len = stream.read(buffer);
-        }
+        stream.transferTo(output);
     }
 
 }
