@@ -19,9 +19,7 @@ public final class InputStreamStreamingOutput implements StreamingOutput {
     }
 
     @Override
-    public void write(OutputStream output)
-            throws IOException, WebApplicationException {
+    public void write(OutputStream output) throws IOException, WebApplicationException {
         stream.transferTo(output);
     }
-
 }

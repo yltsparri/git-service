@@ -2,6 +2,9 @@ package com.example;
 
 import static org.junit.Assert.assertEquals;
 
+import java.util.Arrays;
+import java.util.stream.Stream;
+
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.WebTarget;
@@ -15,6 +18,8 @@ import org.junit.Test;
 
 public final class GitServiceTest {
 
+    private static final String AUTHOR_LINE_START = "author ";
+    private static final String COMMIT_LINE_START = "commit ";
     private static final String POM_CONTENT_STRING = "<project xmlns=\"http://maven.apache.org/POM/4.0.0\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n"
             +
             "         xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd\">\n"
@@ -154,6 +159,65 @@ public final class GitServiceTest {
         assertEquals(HttpStatus.BAD_REQUEST_400.getStatusCode(), response.getStatus());
 
         String responseMsg = response.readEntity(String.class);
-        assertEquals(GitService.HASH_VALIDATION_MESSAGE, responseMsg);
+        assertEquals(GitService.RESOURCE_ID_VALIDATION_MESSAGE, responseMsg);
+    }
+
+    @Test
+    public void testLogMaxCount() {
+        testLogMaxCount(1);
+        testLogMaxCount(2);
+        testLogMaxCount(4);
+    }
+
+    private void testLogMaxCount(int count) {
+        String responseMsg = target.path("git/log")
+                .queryParam(GitService.MAX_COUNT_PARAM, count)
+                .request()
+                .get(String.class);
+        String[] lines = responseMsg.split("\n");
+
+        Stream<String> commitLines = Arrays.stream(lines)
+                .filter(line -> line.startsWith(COMMIT_LINE_START));
+        assertEquals(count, commitLines.count());
+
+        Stream<String> authorLines = Arrays.stream(lines)
+                .filter(line -> line.startsWith(AUTHOR_LINE_START));
+        assertEquals(count, authorLines.count());
+    }
+
+    @Test
+    public void testLogFrom() {
+        String fromCommit = "ad8c76551cdcb741bf5ed6fbba2e8ba5d40ad8a4";
+        String responseMsg = target.path("git/log")
+                .queryParam(GitService.FROM_PARAM, fromCommit)
+                .request()
+                .get(String.class);
+        String[] lines = responseMsg.split("\n");
+        Stream<String> fromCommitLines = Arrays.stream(lines)
+                .filter(line -> line.equals(COMMIT_LINE_START + fromCommit));
+        assertEquals(0, fromCommitLines.count());
+
+        Stream<String> afterFromFommitLine = Arrays.stream(lines)
+                .filter(line -> line.equals(COMMIT_LINE_START + "c2580ffa43cb94667fee3f2093475766b189c0e7"));
+        assertEquals(1, afterFromFommitLine.count());
+    }
+
+    @Test
+    public void testLogTo() {
+        String fromCommit = "ad8c76551cdcb741bf5ed6fbba2e8ba5d40ad8a4";
+        String toCommit = "463202be1fd5d8c1b2167a8bcf43c5d7ba3120b5";
+        String responseMsg = target.path("git/log")
+                .queryParam(GitService.FROM_PARAM, fromCommit)
+                .queryParam(GitService.TO_PARAM, toCommit)
+                .request()
+                .get(String.class);
+        String[] lines = responseMsg.split("\n");
+
+        assertEquals(COMMIT_LINE_START + toCommit, lines[0]);
+
+        Stream<String> fromCommitLines = Arrays.stream(lines)
+                .filter(line -> line.equals(COMMIT_LINE_START + fromCommit));
+
+        assertEquals(0, fromCommitLines.count());
     }
 }
