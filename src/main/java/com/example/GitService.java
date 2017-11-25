@@ -1,22 +1,16 @@
 package com.example;
 
-import java.io.IOException;
-import java.net.URI;
-import java.nio.file.Paths;
+import org.apache.commons.lang3.StringUtils;
 
 import javax.validation.constraints.Pattern;
-import javax.ws.rs.DefaultValue;
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
+import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
-
-import org.apache.commons.lang3.StringUtils;
+import java.io.IOException;
+import java.net.URI;
+import java.nio.file.Paths;
 
 /**
  * Root resource (exposed at "git" path)
@@ -59,32 +53,57 @@ public class GitService {
             @PathParam(RESOURCE_ID_PARAM)
             @Pattern(regexp = HASH_REGEX,
                     message = RESOURCE_ID_VALIDATION_MESSAGE)
-            String resourceId)
+                    String resourceId)
             throws IOException, InterruptedException {
         return GitRunner.catFile(resourceId);
     }
 
+    /*
+        @GET
+        @Path("/log")
+        @Produces(MediaType.TEXT_PLAIN)
+        public Response getLog(
+                @QueryParam(MAX_COUNT_PARAM)
+                @DefaultValue("10")
+                int maxCount,
+
+                @QueryParam(FROM_PARAM)
+                @Pattern(regexp = HASH_REGEX,
+                        message = FROM_VALIDATION_MESSAGE)
+                String fromCommit,
+
+                @QueryParam(TO_PARAM)
+                @Pattern(regexp = HASH_REGEX,
+                        message = TO_VALIDATION_MESSAGE)
+                String toCommit)
+                throws IOException, InterruptedException {
+            if (StringUtils.isNotBlank(toCommit) && StringUtils.isBlank(fromCommit)) {
+                throw new IllegalArgumentException("from parameter is required if to is specified");
+            }
+            return GitRunner.getLog(maxCount, fromCommit, toCommit);
+        }
+    */
     @GET
     @Path("/log")
-    @Produces(MediaType.APPLICATION_OCTET_STREAM)
-    public Response getLog(
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getLogJson(
             @QueryParam(MAX_COUNT_PARAM)
             @DefaultValue("10")
-            int maxCount,
+                    int maxCount,
 
             @QueryParam(FROM_PARAM)
             @Pattern(regexp = HASH_REGEX,
                     message = FROM_VALIDATION_MESSAGE)
-            String fromCommit,
+                    String fromCommit,
 
             @QueryParam(TO_PARAM)
             @Pattern(regexp = HASH_REGEX,
                     message = TO_VALIDATION_MESSAGE)
-            String toCommit)
+                    String toCommit)
             throws IOException, InterruptedException {
         if (StringUtils.isNotBlank(toCommit) && StringUtils.isBlank(fromCommit)) {
             throw new IllegalArgumentException("from parameter is required if to is specified");
         }
-        return GitRunner.getLog(maxCount, fromCommit, toCommit);
+        return GitRunner.getLogJson(maxCount, fromCommit, toCommit);
     }
 }

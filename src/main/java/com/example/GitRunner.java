@@ -1,5 +1,11 @@
 package com.example;
 
+import org.apache.commons.lang3.StringUtils;
+import org.glassfish.grizzly.http.util.HttpStatus;
+
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.StreamingOutput;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -7,22 +13,21 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
-
-import org.apache.commons.lang3.StringUtils;
-import org.glassfish.grizzly.http.util.HttpStatus;
-
 public final class GitRunner {
 
     public static Response catFile(final String resourceId) throws IOException, InterruptedException {
-        final String[] command = new String[] { "git", "cat-file", "-p", resourceId };
-        return getGitResponse(command);
+        final String[] command = new String[]{"git", "cat-file", "-p", resourceId};
+        return getGitResponse(command, MediaType.APPLICATION_OCTET_STREAM, new SimpleStreamingOutputFactory());
     }
 
-    public static Response getLog(int maxCount, String fromCommit, String toCommit)
+    public static Response getLogJson(int maxCount, String fromCommit, String toCommit)
             throws IOException, InterruptedException {
 
+        final String[] commandArray = createGitLogCommand(maxCount, fromCommit, toCommit);
+        return getGitResponse(commandArray, MediaType.APPLICATION_JSON, new JsonLogStreamingOutputFactory());
+    }
+
+    private static String[] createGitLogCommand(int maxCount, String fromCommit, String toCommit) {
         final List<String> command = new ArrayList<String>(
                 Arrays.asList(
                         "git",
@@ -35,7 +40,8 @@ public final class GitRunner {
         if (!StringUtils.isBlank(rangeParam)) {
             command.add(rangeParam);
         }
-        return getGitResponse(command.toArray(new String[0]));
+        final String[] commandArray = command.toArray(new String[0]);
+        return commandArray;
     }
 
     private static String buildRangeParameter(String fromCommit, String toCommit) {
@@ -49,27 +55,34 @@ public final class GitRunner {
         return rangeParam;
     }
 
-    public static Response getGitResponse(final String[] command)
+    public static Response getGitResponse(final String[] command, String mediaType,
+                                          StreamingOutputFactory outputFactory)
             throws IOException, InterruptedException {
-        final ProcessBuilder builder = new ProcessBuilder(command);
-        final Process process = builder.start();
+        final Process process = createGitProcess(command);
         int status = 0;
-        while (waitForExitOrOutput(process)) {
-        }
         if (!process.isAlive()) {
             status = process.exitValue();
         }
         if (status == 0) {
             final InputStream input = process.getInputStream();
-            InputStreamStreamingOutput entity = new InputStreamStreamingOutput(input);
-            return Response.ok(entity, MediaType.APPLICATION_OCTET_STREAM)
+            StreamingOutput entity = outputFactory.getStreamingOutput(input);
+            return Response.ok(entity, mediaType)
                     .build();
         } else {
             final InputStream error = process.getErrorStream();
             return Response.status(HttpStatus.BAD_REQUEST_400.getStatusCode())
-                    .entity(new InputStreamStreamingOutput(error))
+                    .entity(outputFactory.getErrorStreamingOutput(error))
                     .build();
         }
+    }
+
+    private static Process createGitProcess(final String[] command) throws IOException, InterruptedException {
+        final ProcessBuilder builder = new ProcessBuilder(command);
+        final Process process = builder.start();
+
+        while (waitForExitOrOutput(process)) {
+        }
+        return process;
     }
 
     private static boolean waitForExitOrOutput(final Process process)
@@ -77,5 +90,32 @@ public final class GitRunner {
         return process.isAlive() &&
                 process.waitFor(20, TimeUnit.MILLISECONDS) &&
                 process.getInputStream().available() == 0;
+    }
+
+    private static final class SimpleStreamingOutputFactory implements StreamingOutputFactory {
+
+        @Override
+        public StreamingOutput getStreamingOutput(InputStream stream) {
+            return new InputStreamStreamingOutput(stream);
+        }
+
+        @Override
+        public StreamingOutput getErrorStreamingOutput(InputStream stream) {
+            return new InputStreamStreamingOutput(stream);
+        }
+    }
+
+    private static final class JsonLogStreamingOutputFactory implements StreamingOutputFactory {
+
+        @Override
+        public StreamingOutput getStreamingOutput(InputStream stream) {
+            return new JsonLogStreamingOutput(stream);
+        }
+
+        @Override
+        public StreamingOutput getErrorStreamingOutput(InputStream stream) {
+            return new InputStreamStreamingOutput(stream);
+        }
+
     }
 }

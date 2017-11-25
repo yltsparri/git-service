@@ -1,20 +1,25 @@
 package com.example;
 
-import static org.junit.Assert.assertEquals;
-
-import java.util.Arrays;
-import java.util.stream.Stream;
-
-import javax.ws.rs.client.Client;
-import javax.ws.rs.client.ClientBuilder;
-import javax.ws.rs.client.WebTarget;
-import javax.ws.rs.core.Response;
-
+import com.fasterxml.jackson.core.JsonParseException;
 import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.grizzly.http.util.HttpStatus;
+import org.glassfish.jersey.jackson.JacksonFeature;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import javax.ws.rs.client.Client;
+import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.Invocation;
+import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import java.io.IOException;
+
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.core.Is.is;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
 
 public final class GitServiceTest {
 
@@ -114,15 +119,11 @@ public final class GitServiceTest {
         server = Main.startServer();
         // create the client
         Client c = ClientBuilder.newClient();
-
         // uncomment the following line if you want to enable
         // support for JSON in the client (you also have to uncomment
         // dependency on jersey-media-json module in pom.xml and Main.startServer())
         // --
-        // c.configuration().enable(new
-        // org.glassfish.jersey.media.json.JsonJaxbFeature());
-
-        target = c.target(Main.BASE_URI);
+        target = c.register(JacksonFeature.class).target(Main.BASE_URI);
     }
 
     @After
@@ -163,61 +164,52 @@ public final class GitServiceTest {
     }
 
     @Test
-    public void testLogMaxCount() {
-        testLogMaxCount(1);
-        testLogMaxCount(2);
-        testLogMaxCount(4);
+    public void testLogJsonMaxCount() throws JsonParseException, IOException {
+        testLogJsonMaxCount(1);
+        testLogJsonMaxCount(2);
+        testLogJsonMaxCount(3);
+        testLogJsonMaxCount(4);
     }
 
-    private void testLogMaxCount(int count) {
-        String responseMsg = target.path("git/log")
+    private void testLogJsonMaxCount(int count) throws JsonParseException, IOException {
+        final Invocation.Builder builder = target.path("git/log")
                 .queryParam(GitService.MAX_COUNT_PARAM, count)
                 .request()
-                .get(String.class);
-        String[] lines = responseMsg.split("\n");
-
-        Stream<String> commitLines = Arrays.stream(lines)
-                .filter(line -> line.startsWith(COMMIT_LINE_START));
-        assertEquals(count, commitLines.count());
-
-        Stream<String> authorLines = Arrays.stream(lines)
-                .filter(line -> line.startsWith(AUTHOR_LINE_START));
-        assertEquals(count, authorLines.count());
+                .accept(MediaType.APPLICATION_JSON);
+        JsonLogStreamingOutputTest.Commit[] commits = builder
+                .get(JsonLogStreamingOutputTest.Commit[].class);
+        assertEquals("Response has invalid number of commits.", count, commits.length);
     }
 
     @Test
-    public void testLogFrom() {
-        String fromCommit = "ad8c76551cdcb741bf5ed6fbba2e8ba5d40ad8a4";
-        String responseMsg = target.path("git/log")
-                .queryParam(GitService.FROM_PARAM, fromCommit)
+    public void testLogJsonRangeFromNotInResponse() throws JsonParseException, IOException {
+        final String commitHash = "c2580ffa43cb94667fee3f2093475766b189c0e7";
+        final Invocation.Builder builder = target.path("git/log")
+                .queryParam(GitService.MAX_COUNT_PARAM, 1)
+                .queryParam(GitService.FROM_PARAM, commitHash)
                 .request()
-                .get(String.class);
-        String[] lines = responseMsg.split("\n");
-        Stream<String> fromCommitLines = Arrays.stream(lines)
-                .filter(line -> line.equals(COMMIT_LINE_START + fromCommit));
-        assertEquals(0, fromCommitLines.count());
-
-        Stream<String> afterFromFommitLine = Arrays.stream(lines)
-                .filter(line -> line.equals(COMMIT_LINE_START + "c2580ffa43cb94667fee3f2093475766b189c0e7"));
-        assertEquals(1, afterFromFommitLine.count());
+                .accept(MediaType.APPLICATION_JSON);
+        JsonLogStreamingOutputTest.Commit[] commits = builder
+                .get(JsonLogStreamingOutputTest.Commit[].class);
+        assertEquals("Response has invalid number of commits.", 1, commits.length);
+        assertThat(commitHash, not(commits[0].commit));
     }
 
     @Test
-    public void testLogTo() {
-        String fromCommit = "ad8c76551cdcb741bf5ed6fbba2e8ba5d40ad8a4";
-        String toCommit = "463202be1fd5d8c1b2167a8bcf43c5d7ba3120b5";
-        String responseMsg = target.path("git/log")
-                .queryParam(GitService.FROM_PARAM, fromCommit)
-                .queryParam(GitService.TO_PARAM, toCommit)
+    public void testLogJsonRangeFromToResponse() throws JsonParseException, IOException {
+        final String fromCommitHash = "c2580ffa43cb94667fee3f2093475766b189c0e7";
+        final String toCommitHash = "463202be1fd5d8c1b2167a8bcf43c5d7ba3120b5";
+        final Invocation.Builder builder = target.path("git/log")
+                .queryParam(GitService.MAX_COUNT_PARAM, 4)
+                .queryParam(GitService.FROM_PARAM, fromCommitHash)
+                .queryParam(GitService.TO_PARAM, toCommitHash)
                 .request()
-                .get(String.class);
-        String[] lines = responseMsg.split("\n");
-
-        assertEquals(COMMIT_LINE_START + toCommit, lines[0]);
-
-        Stream<String> fromCommitLines = Arrays.stream(lines)
-                .filter(line -> line.equals(COMMIT_LINE_START + fromCommit));
-
-        assertEquals(0, fromCommitLines.count());
+                .accept(MediaType.APPLICATION_JSON);
+        JsonLogStreamingOutputTest.Commit[] commits = builder
+                .get(JsonLogStreamingOutputTest.Commit[].class);
+        assertEquals("Response has invalid number of commits.", 2, commits.length);
+        assertThat(commits[0].commit, not(fromCommitHash));
+        assertThat(commits[1].commit, not(fromCommitHash));
+        assertThat(commits[0].commit, is(toCommitHash));
     }
 }
