@@ -1,10 +1,7 @@
 package com.example;
 
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.Test;
+import static org.junit.Assert.assertEquals;
 
-import javax.ws.rs.WebApplicationException;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -15,7 +12,12 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
 
-import static org.junit.Assert.assertEquals;
+import javax.ws.rs.WebApplicationException;
+
+import org.junit.Test;
+
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 public final class JsonLogStreamingOutputTest {
     static class Person {
@@ -60,9 +62,6 @@ public final class JsonLogStreamingOutputTest {
     @Test
     public void parseSimpleOutput() throws WebApplicationException, IOException {
         final String secondCommitHash = "2c8686f2b644fa0b03da6817d28d6041e05f054b";
-        final String firstAuthorEmail = "<email@gmail.com>";
-        final String firstCommitterEmail = "<email2@gmail.com>";
-        final String secondCommitAuthonEmail = "<email3@gmail.com>";
         final String secondCommitMessageFirstLine = "Use transferTo method to copy stream to output";
         final String secondCommitMessageSecondLine = "Line2";
         final Person firstAuthor = new Person() {
@@ -96,7 +95,7 @@ public final class JsonLogStreamingOutputTest {
                 commit = "b4a46b18800c2efb9e875c3f3e3726f83a7f51a5";
                 tree = "e39755d2ddd1c0cd13dbc55aa0a3d70df8f79129";
                 message = "Service to get git log with basic tests";
-                parents = new String[]{secondCommitHash};
+                parents = new String[] { secondCommitHash };
                 author = firstAuthor;
                 committer = firstCommitter;
             }
@@ -132,7 +131,7 @@ public final class JsonLogStreamingOutputTest {
                 commit = secondCommitHash;
                 tree = "62db2ae7cf15adeab64365e3799f55dc5a0cb5a2";
                 message = secondCommitMessageFirstLine + "\n" + secondCommitMessageSecondLine;
-                parents = new String[]{"64fd50f8a7938a358185bdbcdd9ef81b336a2001"};
+                parents = new String[] { "64fd50f8a7938a358185bdbcdd9ef81b336a2001" };
                 author = secondAuthor;
                 committer = secondCommitter;
             }

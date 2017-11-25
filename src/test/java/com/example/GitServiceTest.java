@@ -1,6 +1,18 @@
 package com.example;
 
-import com.fasterxml.jackson.core.JsonParseException;
+import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.core.Is.is;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
+
+import java.io.IOException;
+
+import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.Invocation;
+import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+
 import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.grizzly.http.util.HttpStatus;
 import org.glassfish.jersey.jackson.JacksonFeature;
@@ -8,23 +20,10 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import javax.ws.rs.client.Client;
-import javax.ws.rs.client.ClientBuilder;
-import javax.ws.rs.client.Invocation;
-import javax.ws.rs.client.WebTarget;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
-import java.io.IOException;
-
-import static org.hamcrest.CoreMatchers.not;
-import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
+import com.fasterxml.jackson.core.JsonParseException;
 
 public final class GitServiceTest {
 
-    private static final String AUTHOR_LINE_START = "author ";
-    private static final String COMMIT_LINE_START = "commit ";
     private static final String POM_CONTENT_STRING = "<project xmlns=\"http://maven.apache.org/POM/4.0.0\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n"
             +
             "         xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd\">\n"
@@ -115,15 +114,11 @@ public final class GitServiceTest {
 
     @Before
     public void setUp() throws Exception {
-        // start the server
         server = Main.startServer();
-        // create the client
-        Client c = ClientBuilder.newClient();
-        // uncomment the following line if you want to enable
-        // support for JSON in the client (you also have to uncomment
-        // dependency on jersey-media-json module in pom.xml and Main.startServer())
-        // --
-        target = c.register(JacksonFeature.class).target(Main.BASE_URI);
+        target = ClientBuilder
+                .newClient()
+                .register(JacksonFeature.class)
+                .target(Main.BASE_URI);
     }
 
     @After
