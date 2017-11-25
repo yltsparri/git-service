@@ -1,24 +1,16 @@
 package com.example;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.Writer;
-import java.util.ArrayList;
-import java.util.Date;
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonGenerator;
+import org.apache.commons.lang3.StringUtils;
 
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.StreamingOutput;
+import java.io.*;
+import java.util.ArrayList;
+import java.util.Date;
 
-import org.apache.commons.lang3.StringUtils;
-
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonGenerator;
-
-public class JsonLogStreamingOutput implements StreamingOutput {
+public class JsonLogStreamingOutput implements StreamingOutput, Closeable {
     private static final String EMAIL_END_SYMBOL = ">";
     private static final String EMAIL_START_SYMBOL = "<";
     private static final String DATE_FIELD_NAME = "date";
@@ -50,6 +42,7 @@ public class JsonLogStreamingOutput implements StreamingOutput {
         JsonFactory factory = new JsonFactory();
         try (Writer writer = new OutputStreamWriter(output)) {
             write(factory, writer);
+            close();
         }
     }
 
@@ -146,5 +139,10 @@ public class JsonLogStreamingOutput implements StreamingOutput {
         generator.writeStringField(DATE_FIELD_NAME, date.toInstant().toString());
 
         generator.writeEndObject();
+    }
+
+    @Override
+    public void close() throws IOException {
+        stream.close();
     }
 }
