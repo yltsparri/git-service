@@ -178,12 +178,13 @@ public final class JsonLogStreamingOutputTest {
                 secondCommitMessageSecondLine);
         Commit[] commits;
         try (InputStream stream = new ByteArrayInputStream(outputText.getBytes(StandardCharsets.UTF_8.name()))) {
-            JsonLogStreamingOutput streamer = new JsonLogStreamingOutput(stream);
-            ByteArrayOutputStream output = new ByteArrayOutputStream();
-            streamer.write(output);
-            JsonFactory factory = new JsonFactory();
-            ObjectMapper mapper = new ObjectMapper(factory);
-            commits = mapper.readValue(output.toByteArray(), Commit[].class);
+            try (JsonLogStreamingOutput streamer = new JsonLogStreamingOutput(stream)) {
+                ByteArrayOutputStream output = new ByteArrayOutputStream();
+                streamer.write(output);
+                JsonFactory factory = new JsonFactory();
+                ObjectMapper mapper = new ObjectMapper(factory);
+                commits = mapper.readValue(output.toByteArray(), Commit[].class);
+            }
         }
 
         assertEquals(2, commits.length);
